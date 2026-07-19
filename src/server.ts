@@ -5,29 +5,45 @@ import config from './app/config';
 import { Server } from 'http';
 
 let server: Server;
+let isConnected = false;
 
-async function main() {
-  try {
-    if (!config.database_url) {
-      console.warn('⚠️ WARNING: DATABASE_URL is not defined in environment variables. Connect call might fail.');
-    }
-    
-    // We only connect if URL is available (prevent immediate crash if .env isn't fully configured by user yet)
-    if (config.database_url) {
-      await mongoose.connect(config.database_url);
-      console.log('🛢️ Connected to MongoDB successfully');
-    }
+const connectDB = async () => {
+  if (isConnected) return;
 
-    server = app.listen(config.port, () => {
-      console.log(`🚀 Server is listening on port ${config.port}`);
-    });
-  } catch (err) {
-    console.error('Failed to connect database', err);
-    process.exit(1);
+  const mongoUri = config.database_url;
+  if (!mongoUri) {
+    console.warn('⚠️ WARNING: DATABASE_URL is missing. Skipping DB connect.');
+    return;
   }
-}
+  
+  try {
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    isConnected = true;
+    console.log('🛢️ Connected to MongoDB successfully');
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err);
+  }
+};
 
-main();
+// Vercel Serverless Wrapper: Ensure DB is connected per request
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+
+// Conditionally start the server listener ONLY if not in Vercel
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  async function main() {
+    await connectDB();
+    server = app.listen(config.port, () => {
+      console.log(`🚀 Server is listening on port ${config.port} (Local)`);
+    });
+  }
+  main();
+}
 
 process.on('unhandledRejection', (err) => {
   console.log('Unhandled Rejection detected, shutting down server...', err);
@@ -44,3 +60,8 @@ process.on('uncaughtException', (err) => {
   console.log('Uncaught Exception detected, shutting down server...', err);
   process.exit(1);
 });
+
+// Export app for Vercel Serverless Function consumption
+export default app;
+module.exports = app;
+
