@@ -5,15 +5,31 @@ import router from './app/routes';
 const app: Application = express();
 
 // Middlewares
-const allowedOrigins = [
-  'http://localhost:5173',
-  process.env.FRONTEND_URL // Configure this in Vercel environment variables
-].filter(Boolean) as string[];
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (e.g., Postman, server-to-server)
+    if (!origin) return callback(null, true);
 
-app.use(cors({ 
-  origin: allowedOrigins, 
-  credentials: true 
-}));
+    const allowedPatterns = [
+      /^http:\/\/localhost:\d+$/,           // any localhost port
+      /^https:\/\/.*\.vercel\.app$/,        // any *.vercel.app domain
+    ];
+
+    const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+// Explicitly handle OPTIONS preflight for all routes
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
