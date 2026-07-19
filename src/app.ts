@@ -5,7 +5,15 @@ import router from './app/routes';
 const app: Application = express();
 
 // Middlewares
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.FRONTEND_URL // Configure this in Vercel environment variables
+].filter(Boolean) as string[];
+
+app.use(cors({ 
+  origin: allowedOrigins, 
+  credentials: true 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -37,3 +45,4 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 export default app;
+module.exports = app; // Required for Vercel Serverless Function export
