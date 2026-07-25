@@ -20,8 +20,20 @@ const getAllItems = async () => {
   return items;
 };
 
+const deleteItem = async (id: string, userId: string) => {
+  const item = await Item.findOneAndDelete({ _id: id, userId: new Types.ObjectId(userId) });
+  return item;
+};
+
+const getItemById = async (id: string) => {
+  const item = await Item.findById(id).populate('userId', 'name email');
+  return item;
+};
+
 export const ItemService = {
   createItem,
   getItemsByUser,
+  deleteItem,
   getAllItems,
+  getItemById,
 };

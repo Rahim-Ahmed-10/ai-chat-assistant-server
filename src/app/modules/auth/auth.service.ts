@@ -3,6 +3,7 @@ import { IUser } from '../user/user.interface';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import config from '../../config';
+import crypto from 'crypto';
 
 export interface ILoginData {
   email: string;
@@ -63,7 +64,63 @@ const login = async (payload: ILoginData) => {
   };
 };
 
+const demoLogin = async () => {
+  const demoEmail = 'demo@example.com';
+  let user = await User.findOne({ email: demoEmail });
+  
+  if (!user) {
+    user = await User.create({
+      name: 'Demo User',
+      email: demoEmail,
+      password: 'DemoPassword123!',
+    });
+  }
+
+  const userObject = user.toObject();
+  delete userObject.password;
+
+  const token = jwt.sign(
+    { _id: userObject._id, email: userObject.email },
+    config.jwt_secret,
+    { expiresIn: config.jwt_expires_in }
+  );
+
+  return {
+    user: userObject,
+    token,
+  };
+};
+
+const googleLogin = async (payload: { email: string; name: string }) => {
+  let user = await User.findOne({ email: payload.email });
+
+  if (!user) {
+    const randomPassword = crypto.randomBytes(16).toString('hex');
+    user = await User.create({
+      name: payload.name || 'Google User',
+      email: payload.email,
+      password: randomPassword,
+    });
+  }
+
+  const userObject = user.toObject();
+  delete userObject.password;
+
+  const token = jwt.sign(
+    { _id: userObject._id, email: userObject.email },
+    config.jwt_secret,
+    { expiresIn: config.jwt_expires_in }
+  );
+
+  return {
+    user: userObject,
+    token,
+  };
+};
+
 export const AuthService = {
   signup,
   login,
+  demoLogin,
+  googleLogin,
 };

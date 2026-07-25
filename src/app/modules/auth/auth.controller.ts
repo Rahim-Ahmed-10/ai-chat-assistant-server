@@ -41,7 +41,43 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
+const demoLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await AuthService.demoLogin();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Demo user logged in successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error?.message || 'Failed to login demo user.',
+    });
+  }
+};
+
+const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await AuthService.googleLogin(req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Google user logged in successfully',
+      data: result,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error?.message || 'Failed to login with Google.',
+    });
+  }
+};
+
 export const AuthController = {
   signup,
   login,
+  demoLogin,
+  googleLogin,
 };
